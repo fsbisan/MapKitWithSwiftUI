@@ -10,14 +10,14 @@ import MapKit
 
 struct ContentView: View {
     
-    @StateObject private var coordinateGetHelper = CoordinateGetHelper()
-    @State var targetMKItems: [MKMapItem] = []
-    @State var textValue = ""
-    @FocusState private var focusedField: Field?
+    @StateObject private var mapItemManager = MapItemManager()
+    @State private var targetMKItems: [MKMapItem] = []
+    @State private var textValue = ""
+    @State private var showItems = false
+    @State private var showDirectionPoints = false
+    @State private var showRoute = false
     
-    private  func addTarget(item: MKMapItem) {
-        targetMKItems.append(item)
-    }
+    @FocusState private var focusedField: Field?
     
     var body: some View {
         GeometryReader { geometry in
@@ -25,72 +25,44 @@ struct ContentView: View {
             let width = geometry.size.width
             
             ZStack {
-                VStack {
-                    MapView(targetMKItems: $targetMKItems)
-                        .ignoresSafeArea()
-                }
-                .onTapGesture {
-                    focusedField = nil
-                    coordinateGetHelper.searchedMapItems = []
-                    textValue = ""
-                }
-                if !targetMKItems.isEmpty {
-                    VStack {
-                        ForEach(targetMKItems, id: \.self) { item in
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .frame(width: 300, height: 40)
-                                    .foregroundColor(.white)
-                                Text(item.name ?? "")
-                            }
-                        }
-                        Spacer()
+                MapView(targetMKItems: $targetMKItems, showRoute: $showRoute)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        focusedField = nil
+                        mapItemManager.searchedMapItems = []
+                        textValue = ""
                     }
+                if showDirectionPoints {
+                    StartAndEndPointsView(mkItems: targetMKItems)
                 }
-                
                 VStack {
                     Spacer()
-                    HStack {
-                        TextField("Find Location", text: $textValue)
-                            .onChange(of: textValue) { newValue in
-                                coordinateGetHelper.localSearch(itemName: newValue)
-                            }
-                            .textFieldStyle(.roundedBorder)
-                            .focused($focusedField, equals: .first)
-                        Button {
-                            coordinateGetHelper.searchedMapItems = []
-                            textValue = ""
-                        } label: {
-                            Text("Delete")
-                                .padding(7)
-                                .background(Color(.white))
-                                .cornerRadius(5)
-                        }
-                        Button {
-                            targetMKItems = []
-                        } label: {
-                            Text("Clear")
-                                .padding(7)
-                                .background(Color(.white))
-                                .cornerRadius(5)
-                        }
-                    }
-                    .padding()
-                    if !coordinateGetHelper.searchedMapItems.isEmpty {
-                        List(coordinateGetHelper.searchedMapItems, id: \.self) { mapItem in
-                            if let name = mapItem.name {
-                                Button(action: {
-                                    addTarget(item: mapItem)
-                                }, label: {
-                                    Text(name)
-                                })
-                            }
-                        }.listStyle(.inset)
-                            .frame(width: width, height: coordinateGetHelper.searchedMapItems.count < 6 ? CGFloat(coordinateGetHelper.searchedMapItems.count) * 40 : 240, alignment: .leading)
-                            .padding(.bottom)
+                    FindTextFieldWithButtonsView(showItems: $showItems, textValue: $textValue,
+                                  mapItemManager: mapItemManager, deleteButtonAction: deleteItems, routeButtonAction: routeButtonDidTapped, showRoute: showRoute,
+                                  items: targetMKItems)
+                        .focused($focusedField, equals: .first)
+                    
+                    if showItems {
+                        FoundedItemsListView(mapItemManager: mapItemManager, items: $targetMKItems, showDirectionPoints: $showDirectionPoints, width: width)
                     }
                 }
             }
+        }
+    }
+    
+    private func deleteItems() {
+        mapItemManager.searchedMapItems = []
+        textValue = ""
+    }
+    
+    private func routeButtonDidTapped() {
+        if showRoute {
+            targetMKItems = []
+            showRoute = false
+        } else {
+            showRoute = true
+            focusedField = nil
+            deleteItems()
         }
     }
 }

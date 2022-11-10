@@ -8,34 +8,28 @@
 import Foundation
 import MapKit
 
-class CoordinateGetHelper: ObservableObject {
+final class MapItemManager: ObservableObject {
     @Published var searchedMapItems: [MKMapItem] = []
     
-    func localSearch(itemName: String) {
+    func searchItems(with name: String) {
         let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = itemName
+        searchRequest.naturalLanguageQuery = name
         
-        //Выставляем в локацию (Нижний Тагил)
+        //Выставляем локацию (Нижний Тагил)
         searchRequest.region = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 58, longitude: 60),
             span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5))
-        
+        // Cоздаем запрос из текста
         let search = MKLocalSearch(request: searchRequest)
+        // Запрашиваем айтемы
         search.start { [unowned self] (response, error) in
             if let error = error {
                 print(error)
                 return
             }
             guard let response = response else { return }
-            
+            // Присваеваем полученные значения в массив
             self.searchedMapItems = response.mapItems
-            
-            for item in response.mapItems {
-                if let name = item.name,
-                   let location = item.placemark.location {
-                    print("\(name): \(location.coordinate.latitude),\(location.coordinate.longitude)")
-                }
-            }
         }
     }
 }

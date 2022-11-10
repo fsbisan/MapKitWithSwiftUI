@@ -13,6 +13,9 @@ struct MapView: UIViewRepresentable {
     // Набор айтемов для отображения аннотаций и маршрута
     @Binding var targetMKItems: [MKMapItem]
     
+    // Свойство показывает отображается ли маршрут
+    @Binding var showRoute: Bool
+    
     typealias UIViewType = MKMapView
     
     func makeUIView(context: Context) -> MKMapView {
@@ -32,13 +35,13 @@ struct MapView: UIViewRepresentable {
     func updateUIView(_ uiView: MKMapView, context: Context) {
         if !targetMKItems.isEmpty {
             for targetMKItem in targetMKItems {
-                uiView.addAnnotations([targetMKItem.placemark])
+                uiView.showAnnotations([targetMKItem.placemark], animated: true)
             }
         } else {
             resetButtonDidTapped()
         }
         
-        if targetMKItems.count == 2 {
+        if showRoute {
             // Создаем запрос
             let request = MKDirections.Request()
             request.source = targetMKItems[0]
@@ -52,7 +55,7 @@ struct MapView: UIViewRepresentable {
                 uiView.addOverlay(route.polyline)
                 uiView.setVisibleMapRect(
                     route.polyline.boundingMapRect,
-                    edgePadding: UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20),
+                    edgePadding: UIEdgeInsets(top: 120, left: 20, bottom: 60, right: 20),
                     animated: true)
             }
         }
@@ -69,8 +72,8 @@ struct MapView: UIViewRepresentable {
         return MapViewCoordinator()
     }
     
-    class MapViewCoordinator: NSObject, MKMapViewDelegate {
-        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+    final class MapViewCoordinator: NSObject, MKMapViewDelegate {
+        internal func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             // Рисуем полилинию(маршрут)
             let renderer = MKPolylineRenderer(overlay: overlay)
             renderer.strokeColor = .systemBlue
@@ -80,9 +83,8 @@ struct MapView: UIViewRepresentable {
     }
 }
 
-
 struct MapView_Previews: PreviewProvider {
     static var previews: some View {
-        MapView(targetMKItems: .constant([]))
+        MapView(targetMKItems: .constant([]), showRoute: .constant(false))
     }
 }
